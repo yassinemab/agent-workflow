@@ -1,6 +1,6 @@
 # agent-workflow
 
-Rules, skills and hooks that make AI coding agents (Claude Code and Codex) work like a careful senior developer: ask questions before building, write tests first, get an independent review, and prove it works before saying "done".
+Rules, skills and hooks that make AI coding agents (Claude Code and Codex) work like a careful senior developer. It's built on one principle: **leave the code better than you found it.** Agents ask questions before building, write tests first, get an independent review and prove it works before saying "done". When they spot a flaw in nearby code, they explain it and ask before fixing it. Every mistake becomes a new rule or check, so quality only goes up.
 
 ## Why
 
