@@ -1,0 +1,21 @@
+[
+  {"id": "bug-indirect", "prompt": "When a customer enters 1,5 as the price on an invoice line, the invoice total comes out as 15 instead of 1.50. Can you look into it?", "expect_skill": "fix-bug", "notes": "A bug described as a symptom; the word 'bug' never appears."},
+  {"id": "bug-error-message", "prompt": "parse_amount('1.234,56') raises decimal.InvalidOperation for some customers. What's going on?", "expect_skill": "fix-bug", "notes": "Asking 'what's going on' about an error is still a bug report, not just a question."},
+  {"id": "bug-vague", "prompt": "Some Dutch customers say their invoice totals look off.", "expect_skill": "fix-bug"},
+  {"id": "bug-failing-test", "prompt": "test_invoice.py started failing after yesterday's change, can you sort it out?", "expect_skill": "fix-bug"},
+  {"id": "feature-direct", "prompt": "Add a discount percentage per invoice line.", "expect_skill": "scope-feature"},
+  {"id": "feature-want", "prompt": "I want accountants to be able to export all invoices of a month as one CSV file.", "expect_skill": "scope-feature"},
+  {"id": "feature-indirect", "prompt": "Customers keep asking whether they can get their invoices in English as well.", "expect_skill": "scope-feature", "notes": "A feature hidden in a customer request."},
+  {"id": "feature-llm", "prompt": "Build an AI assistant that drafts payment reminder emails for overdue invoices.", "expect_skill": ["scope-feature", "agent-harness"], "notes": "An LLM feature: scoping, with agent-harness on top."},
+  {"id": "design-after-spec", "prompt": "The spec in specs/discount.md is approved. How should we build it?", "expect_skill": "design-feature"},
+  {"id": "build-after-design", "prompt": "The spec and design in specs/discount.md are approved. Go ahead and build it.", "expect_skill": "build-feature"},
+  {"id": "refactor", "prompt": "billing/reminders.py has grown messy. Clean it up without changing what it does.", "expect_skill": "refine-code"},
+  {"id": "review", "prompt": "I just changed parse_amount in billing/invoice.py. Can you review my change before I commit it?", "expect_skill": "review-change", "uncommitted": {"billing/invoice.py": "from decimal import Decimal\n\n\ndef parse_amount(text: str) -> Decimal:\n    \"\"\"Parse an amount typed by a Dutch user, e.g. '1.234,56'.\"\"\"\n    return Decimal(text.replace(\".\", \"\").replace(\",\", \".\"))\n\n\ndef invoice_total(lines: list[tuple[str, int]]) -> Decimal:\n    return sum((parse_amount(price) * qty for price, qty in lines), Decimal(\"0\"))\n"}, "notes": "The change to review is uncommitted in the fixture copy."},
+  {"id": "qa", "prompt": "Run QA on the invoice total calculation.", "expect_skill": "feature-qa"},
+  {"id": "design-review", "prompt": "Does the invoice page look consistent with the rest of the app's design?", "expect_skill": "check-design"},
+  {"id": "adr", "prompt": "We've decided to store amounts as integer cents instead of Decimal, because of rounding issues with the payment provider. Record that decision.", "expect_skill": "adr"},
+  {"id": "retro", "prompt": "That feature is done. Let's look back at what went wrong in how you worked and improve the workflow.", "expect_skill": "retro"},
+  {"id": "harness-audit", "prompt": "Is our AI reminder-email agent production-ready? What's missing in its harness?", "expect_skill": "agent-harness"},
+  {"id": "question-only", "prompt": "What does parse_amount do?", "expect_skill": "none", "notes": "A plain question needs no workflow skill."},
+  {"id": "tiny-tweak", "prompt": "In parse_amount's docstring, change the word 'typed' to 'entered'.", "expect_skill": "none", "notes": "A one-line tweak needs no scoping."}
+]

@@ -1,0 +1,92 @@
+#!/usr/bin/env python3
+"""Run the project's full checks (from its workflow.json) and record the result.
+
+Usage: run-checks [--list]
+
+Runs every check from the repo root, streams its output, prints a summary and
+records which working-tree state the run covered, so the require-checks hook
+knows the current state was verified. Exits 1 if any check failed.
+"""
+
+from __future__ import annotations
+
+import os
+import signal
+import subprocess
+import sys
+import time
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+
+from aw import config, repo, state  # noqa: E402
+
+
+def run_with_timeout(command: str, cwd: Path, timeout_minutes: float) -> int | None:
+    """Run a check in its own process group; None means it timed out and was killed."""
+    process = subprocess.Popen(command, shell=True, cwd=cwd, start_new_session=True)
+    try:
+        return process.wait(timeout=timeout_minutes * 60)
+    except subprocess.TimeoutExpired:
+        os.killpg(process.pid, signal.SIGKILL)
+        process.wait()
+        return None
+
+
+def main(argv: list[str]) -> int:
+    root = repo.find_repo_root(Path.cwd())
+    if root is None:
+        print("run-checks: not inside a git repository.", file=sys.stderr)
+        return 2
+    workflow = config.load_config(root)
+    if not workflow.checks:
+        print(
+            f"run-checks: no checks configured for {repo.repo_name(root)}. Add a workflow.json "
+            "(format: ~/.claude/project-profiles/README.md).",
+            file=sys.stderr,
+        )
+        return 2
+    if argv[1:] == ["--list"]:
+        for check in workflow.checks:
+            print(f"{check.name}: (cd {check.cwd} && {check.run})")
+        return 0
+    if argv[1:]:
+        print(__doc__, file=sys.stderr)
+        return 2
+
+    tree_before = repo.tree_hash(root)
+    failed: list[str] = []
+    timed_out: set[str] = set()
+    timings: list[tuple[str, bool, float]] = []
+    for check in workflow.checks:
+        print(f"\n=== {check.name}: (cd {check.cwd} && {check.run})", flush=True)
+        started = time.monotonic()
+        returncode = run_with_timeout(check.run, root / check.cwd, check.timeout_minutes)
+        passed = returncode == 0
+        timings.append((check.name, passed, time.monotonic() - started))
+        if returncode is None:
+            timed_out.add(check.name)
+            print(f"run-checks: {check.name} timed out after {check.timeout_minutes:g} min", flush=True)
+        if not passed:
+            failed.append(check.name)
+
+    # Checks may write files that aren't ignored; the state after the run counts too.
+    trees = tuple(dict.fromkeys([tree_before, repo.tree_hash(root)]))
+    state.record_checks(
+        root,
+        state.CheckRecord(
+            trees=trees, passed=not failed, failed=tuple(failed), finished_at=time.time()
+        ),
+    )
+
+    print(f"\n=== run-checks summary ({workflow.source})")
+    for name, passed, seconds in timings:
+        note = ", timed out" if name in timed_out else ""
+        print(f"{'PASS' if passed else 'FAIL'}  {name}  ({seconds:.1f}s{note})")
+    if len(trees) > 1:
+        print("note: the checks changed files in the working tree (not ignored by git).")
+    return 1 if failed else 0
+
+
+if __name__ == "__main__":
+    sys.exit(main(sys.argv))
