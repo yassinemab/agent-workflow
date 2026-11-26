@@ -28,7 +28,7 @@ Use the first rung that fits:
 3. **A hook or a check** in `~/agent-workflow`: for example, a new `guard-commands` rule, or a `blocked_commands` entry in the project's `workflow.json`. Prove it would have caught this real mistake: add a test in `~/agent-workflow/tests/` that feeds it the actual command or edit.
 4. **A skill step** in `~/agent-workflow/skills/`: when the mistake came from a missing or unclear step in a procedure.
 5. **A project fact** in the project profile: when the agent lacked knowledge about this repo.
-6. **Rule text** in `~/agent-workflow/global/AGENTS.md`, last.
+6. **Rule text** in `~/agent-workflow/global/AGENTS.md`, last. Word it generically: the repo may be published, so a lesson from one project goes in that project's profile, and the global rule keeps only the general part. `run-checks` in `~/agent-workflow` scans for project names, hosts and personal data.
 
 When the mistake was the wrong skill (or none) for a request, also propose an eval case in `~/agent-workflow/evals/cases.json` with the user's actual wording, so `run-evals` catches it next time. Read the existing rules first. If one already covers it, the problem is its wording or placement, so reword it rather than adding a near-duplicate. Keep the file under about 200 lines: when adding, look for something to merge or cut.
 

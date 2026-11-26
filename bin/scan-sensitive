@@ -1,0 +1,51 @@
+#!/usr/bin/env python3
+"""Fail if anything git would commit contains data that must not be published.
+
+Usage: scan-sensitive
+
+Scans tracked files and untracked files that aren't ignored, in the repo of the
+current folder. Findings show the file, line and kind, never the matched text.
+Private words come from ~/.config/agent-workflow/sensitive-words.txt (outside
+the repo). Exits 1 when anything is found.
+"""
+
+from __future__ import annotations
+
+import subprocess
+import sys
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+
+from aw import repo, sensitive  # noqa: E402
+
+
+def main() -> int:
+    root = repo.find_repo_root(Path.cwd())
+    if root is None:
+        print("scan-sensitive: not inside a git repository.", file=sys.stderr)
+        return 2
+    listed = subprocess.run(
+        ["git", "ls-files", "--cached", "--others", "--exclude-standard", "-z"],
+        cwd=root, capture_output=True, check=True,
+    ).stdout.decode().split("\0")
+    words = sensitive.load_words(sensitive.words_path())
+    found = 0
+    for name in sorted(n for n in listed if n):
+        path = root / name
+        try:
+            text = path.read_text()
+        except (UnicodeDecodeError, IsADirectoryError, FileNotFoundError):
+            continue  # binary files, submodules, deleted files
+        for finding in sensitive.scan_text(text, words):
+            print(f"{name}:{finding.line}: {finding.kind}")
+            found += 1
+    if found:
+        print(f"\nscan-sensitive: {found} finding(s). Remove them, or move project facts into the project profile.")
+        return 1
+    print(f"scan-sensitive: clean ({len(words)} private word(s) checked).")
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

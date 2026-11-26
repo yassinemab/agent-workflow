@@ -44,6 +44,10 @@ These are a safety net over shell text and edit content, not a sandbox: a determ
 
 Each case in `evals/cases.json` runs `claude -p` in a throwaway copy of `evals/fixture/`, in `dontAsk` permission mode, and passes when the first skill it loads is the expected one, with no code edits before it. A run stops as soon as the verdict is known. The runs use your Claude subscription (about 19 short sessions), so they aren't part of `run-checks`. Run them after changing a skill description or a rule, and add a case whenever a request reached the wrong skill. Results are saved in `~/.cache/agent-workflow/evals/`.
 
+## Security
+
+The hooks run on your machine before and after every tool call, with your permissions. Read every change to `hooks/`, `aw/`, `bin/` and `install.py` before you pull or merge it, from anyone. `bin/scan-sensitive` (part of this repo's `run-checks`) fails on credentials, personal emails, IP addresses, home folders and the private words in `~/.config/agent-workflow/sensitive-words.txt`, which stays outside the repo.
+
 ## Install and update
 
 ```bash
@@ -62,3 +66,13 @@ cd ~/agent-workflow && bin/run-checks
 ```
 
 Changes to the workflow follow the self-improvement rule in `global/AGENTS.md` §11: an agent proposes the exact change at the end of a turn, and makes it only after your explicit yes in chat. Then it runs `bin/run-checks`, and `bin/run-evals` if a skill or rule changed.
+
+## Credits
+
+- The lifecycle and review ideas draw on [mattpocock/skills](https://github.com/mattpocock/skills) (grilling with recommended answers, test seams agreed up front, two-axis review, ADR criteria, retros that turn mistakes into checks) and Cursor's [pstack](https://github.com/cursor/plugins/tree/main/pstack) (independent verification, rule-enforcement ladder, evidence in every report). No text was copied.
+- `skills/check-design` paraphrases six public design skills; its checklist lists them with their licences.
+- `skills/unslop` is adapted from [blader/humanizer](https://github.com/blader/humanizer) (MIT); see `skills/unslop/LICENSE-humanizer`.
+
+## Licence
+
+MIT; see `LICENSE`.
