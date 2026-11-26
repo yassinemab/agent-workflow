@@ -62,10 +62,19 @@ class HookHarness(unittest.TestCase):
         self.assertEqual(result.returncode, 0, result.stderr)
         return json.loads(result.stdout) if result.stdout.strip() else None
 
-    def run_checks(self) -> subprocess.CompletedProcess[str]:
+    def edit(self, path: Path, content: str, tool: str = "Edit") -> None:
+        """What an agent's Edit or Write does: the track-edits hook runs, then the file changes."""
+        self.assertIsNone(self.hook("track_edits.py", {"tool_name": tool, "tool_input": {"file_path": str(path)}}))
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(content)
+
+    def stop(self, active: bool = False) -> dict[str, object] | None:
+        return self.hook("require_checks.py", {"stop_hook_active": active})
+
+    def run_checks(self, repo: Path | None = None) -> subprocess.CompletedProcess[str]:
         return subprocess.run(
             [sys.executable, str(ROOT / "bin" / "run-checks")],
-            cwd=self.repo,
+            cwd=repo or self.repo,
             capture_output=True,
             text=True,
             env=self.env,
@@ -77,44 +86,84 @@ class RequireChecksHook(HookHarness):
     def test_full_turn_cycle(self) -> None:
         self.write_config({"checks": [{"name": "unit", "run": "test -f app.py"}]})
         self.assertIsNone(self.hook("track_turn.py", {"prompt": "go"}))
+        self.assertIsNone(self.stop())  # nothing edited yet
 
-        # Nothing changed: the turn may end.
-        self.assertIsNone(self.hook("require_checks.py", {"stop_hook_active": False}))
-
-        # Code changed and no checks ran: blocked.
-        (self.repo / "app.py").write_text("x = 2\n")
-        blocked = self.hook("require_checks.py", {"stop_hook_active": False})
+        self.edit(self.repo / "app.py", "x = 2\n")
+        blocked = self.stop()
         assert blocked is not None
         self.assertEqual(blocked["decision"], "block")
         self.assertIn("app.py", str(blocked["reason"]))
 
-        # The checks pass on the current state: allowed.
         result = self.run_checks()
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
         self.assertIn("PASS  unit", result.stdout)
-        self.assertIsNone(self.hook("require_checks.py", {"stop_hook_active": False}))
+        self.assertIsNone(self.stop())
 
-        # A further edit after the run: blocked again.
-        (self.repo / "new_module.py").write_text("y = 1\n")
-        self.assertIsNotNone(self.hook("require_checks.py", {"stop_hook_active": True}))
+        self.edit(self.repo / "new_module.py", "y = 1\n", tool="Write")
+        self.assertIsNotNone(self.stop(active=True))  # edited after the run
 
     def test_doc_only_changes_need_no_checks(self) -> None:
         self.write_config({"checks": [{"name": "unit", "run": "true"}]})
         self.hook("track_turn.py", {"prompt": "go"})
-        (self.repo / "README.md").write_text("better readme\n")
-        self.assertIsNone(self.hook("require_checks.py", {"stop_hook_active": False}))
+        self.edit(self.repo / "README.md", "better readme\n")
+        self.assertIsNone(self.stop())
 
     def test_failing_checks_are_recorded_and_reported_once(self) -> None:
         self.write_config({"checks": [{"name": "unit", "run": "exit 3"}]})
         self.hook("track_turn.py", {"prompt": "go"})
-        (self.repo / "app.py").write_text("x = 2\n")
+        self.edit(self.repo / "app.py", "x = 2\n")
         result = self.run_checks()
         self.assertEqual(result.returncode, 1)
         self.assertIn("FAIL  unit", result.stdout)
-        blocked = self.hook("require_checks.py", {"stop_hook_active": False})
+        blocked = self.stop()
         assert blocked is not None
-        self.assertIn("failed on the current state: unit", str(blocked["reason"]))
-        self.assertIsNone(self.hook("require_checks.py", {"stop_hook_active": True}))
+        self.assertIn("failed for the current state of your changes: unit", str(blocked["reason"]))
+        self.assertIsNone(self.stop(active=True))
+
+    def test_changes_made_by_someone_else_dont_block(self) -> None:
+        self.write_config({"checks": [{"name": "unit", "run": "true"}]})
+        self.hook("track_turn.py", {"prompt": "go"})
+        (self.repo / "app.py").write_text("x = 99\n")  # another session, not through this session's tools
+        self.assertIsNone(self.stop())
+
+    def test_someone_elses_later_edits_dont_undo_a_passing_run(self) -> None:
+        self.write_config({"checks": [{"name": "unit", "run": "true"}]})
+        self.hook("track_turn.py", {"prompt": "go"})
+        self.edit(self.repo / "app.py", "x = 2\n")
+        self.assertEqual(self.run_checks().returncode, 0)
+        (self.repo / "other.py").write_text("z = 1\n")  # another session, after the run
+        self.assertIsNone(self.stop())
+
+    def test_edits_in_another_repo_are_checked_there(self) -> None:
+        other = Path(self._tmp.name) / "workflow-repo"
+        other.mkdir()
+        git(other, "init", "-q", "-b", "main")
+        (other / "tool.py").write_text("a = 1\n")
+        (other / ".claude").mkdir()
+        (other / ".claude" / "workflow.json").write_text(json.dumps({"checks": [{"name": "unit", "run": "true"}]}))
+        git(other, "add", ".")
+        git(other, "-c", "user.email=t@example.com", "-c", "user.name=t", "commit", "-qm", "init")
+        self.hook("track_turn.py", {"prompt": "go"})
+        self.edit(other / "tool.py", "a = 2\n")
+        blocked = self.stop()
+        assert blocked is not None
+        self.assertIn(str(other), str(blocked["reason"]))
+        self.assertEqual(self.run_checks(other).returncode, 0)
+        self.assertIsNone(self.stop())
+
+    def test_a_new_turn_starts_clean(self) -> None:
+        self.write_config({"checks": [{"name": "unit", "run": "true"}]})
+        self.hook("track_turn.py", {"prompt": "go"})
+        self.edit(self.repo / "app.py", "x = 2\n")
+        self.hook("track_turn.py", {"prompt": "next question"})
+        self.assertIsNone(self.stop())
+
+    def test_files_outside_git_are_ignored(self) -> None:
+        outside = Path(self._tmp.name) / "plain"
+        outside.mkdir()
+        self.hook("track_turn.py", {"prompt": "go"})
+        self.edit(outside / "notes.py", "x = 1\n")
+        self.assertIsNone(self.stop())
 
     def test_a_hung_check_times_out_and_fails(self) -> None:
         self.write_config({"checks": [{"name": "hangs", "run": "sleep 300", "timeout_minutes": 0.02}]})
@@ -122,13 +171,6 @@ class RequireChecksHook(HookHarness):
         self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
         self.assertIn("FAIL  hangs", result.stdout)
         self.assertIn("timed out after 0.02 min", result.stdout)
-
-    def test_outside_git_does_nothing(self) -> None:
-        outside = Path(self._tmp.name) / "plain"
-        outside.mkdir()
-        payload = {"cwd": str(outside)}
-        self.assertIsNone(self.hook("track_turn.py", payload))
-        self.assertIsNone(self.hook("require_checks.py", payload))
 
     def test_run_checks_without_config_explains_what_to_do(self) -> None:
         result = self.run_checks()

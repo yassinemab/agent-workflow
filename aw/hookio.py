@@ -3,13 +3,14 @@
 from __future__ import annotations
 
 import json
-import os
 import sys
 import time
 import traceback
 from collections.abc import Callable
 from pathlib import Path
 from typing import cast
+
+from aw.state import state_dir
 
 HookInput = dict[str, object]
 _REASON_LIMIT = 300
@@ -19,8 +20,7 @@ _hook_cwd = ""
 
 def events_path() -> Path:
     """Where hook decisions are logged, one JSON object per line (read by `retro`)."""
-    base = os.environ.get("AW_STATE_DIR")
-    return (Path(base) if base else Path.home() / ".cache" / "agent-workflow") / "events.jsonl"
+    return state_dir() / "events.jsonl"
 
 
 def log_event(decision: str, reason: str) -> None:

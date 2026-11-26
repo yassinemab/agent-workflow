@@ -5,7 +5,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from aw.checks_gate import TurnState, block_reason
+from aw.checks_gate import RepoTurn, block_reason, checks_status, code_paths
 from aw.config import EMPTY_CONFIG, Check, ConfigError, WorkflowConfig, parse_config
 from aw.globs import matches
 from aw.state import CheckRecord
@@ -20,10 +20,8 @@ CONFIG = WorkflowConfig(
 )
 
 
-def turn(changed: tuple[str, ...], *, active: bool = False, start: str | None = "t0") -> TurnState:
-    return TurnState(
-        turn_start_tree=start, current_tree="t1", changed_paths=changed, stop_hook_active=active
-    )
+def turn(changed: tuple[str, ...], checks: str = "missing", *, active: bool = False, failed: tuple[str, ...] = ()) -> RepoTurn:
+    return RepoTurn(repo="/r", changed=changed, checks=checks, failed=failed, stop_hook_active=active)
 
 
 def record(trees: tuple[str, ...], passed: bool, failed: tuple[str, ...] = ()) -> CheckRecord:
@@ -82,45 +80,61 @@ class ParsingWorkflowJson(unittest.TestCase):
 
 
 class EndingATurn(unittest.TestCase):
-    def test_allowed_when_nothing_changed_or_no_baseline(self) -> None:
-        unchanged = TurnState("t1", "t1", (), False)
-        self.assertIsNone(block_reason(unchanged, CONFIG, None))
-        self.assertIsNone(block_reason(turn(("app.py",), start=None), CONFIG, None))
+    def test_allowed_when_this_session_changed_nothing(self) -> None:
+        self.assertIsNone(block_reason(turn(()), CONFIG))
 
-    def test_allowed_when_only_docs_changed(self) -> None:
-        self.assertIsNone(block_reason(turn(("README.md", "docs/adr/0001-x.md")), CONFIG, None))
+    def test_docs_need_no_checks(self) -> None:
+        self.assertEqual(code_paths(("README.md", "docs/adr/0001-x.md", "app.py"), CONFIG), ("app.py",))
+        self.assertEqual(code_paths(("README.md", "docs/adr/0001-x.md"), CONFIG), ())
 
-    def test_blocked_when_code_changed_and_checks_never_ran_on_it(self) -> None:
-        reason = block_reason(turn(("app.py", "README.md")), CONFIG, record(("t0",), True))
-        self.assertIsNotNone(reason)
+    def test_blocked_when_code_changed_and_no_check_run_covers_it(self) -> None:
+        reason = block_reason(turn(("app.py",)), CONFIG)
         assert reason is not None
-        self.assertIn("1 file: app.py", reason)
+        self.assertIn("in /r (1 file: app.py)", reason)
         self.assertIn("run-checks", reason)
 
     def test_still_blocked_on_a_second_stop_without_a_run(self) -> None:
-        self.assertIsNotNone(block_reason(turn(("app.py",), active=True), CONFIG, None))
+        self.assertIsNotNone(block_reason(turn(("app.py",), active=True), CONFIG))
 
-    def test_allowed_when_checks_passed_on_the_current_state(self) -> None:
-        self.assertIsNone(block_reason(turn(("app.py",)), CONFIG, record(("t1",), True)))
-        self.assertIsNone(block_reason(turn(("app.py",)), CONFIG, record(("t0", "t1"), True)))
+    def test_allowed_when_a_passing_run_covers_the_changes(self) -> None:
+        self.assertIsNone(block_reason(turn(("app.py",), "passed"), CONFIG))
 
     def test_failed_checks_block_once_so_the_agent_reports_them(self) -> None:
-        failing = record(("t1",), False, ("backend tests",))
-        reason = block_reason(turn(("app.py",)), CONFIG, failing)
-        self.assertIsNotNone(reason)
+        reason = block_reason(turn(("app.py",), "failed", failed=("backend tests",)), CONFIG)
         assert reason is not None
-        self.assertIn("backend tests", reason)
-        self.assertIsNone(block_reason(turn(("app.py",), active=True), CONFIG, failing))
+        self.assertIn("failed for the current state of your changes: backend tests", reason)
+        self.assertIsNone(block_reason(turn(("app.py",), "failed", active=True, failed=("x",)), CONFIG))
 
     def test_repo_without_checks_gets_one_reminder(self) -> None:
-        self.assertIsNotNone(block_reason(turn(("app.py",)), EMPTY_CONFIG, None))
-        self.assertIsNone(block_reason(turn(("app.py",), active=True), EMPTY_CONFIG, None))
+        self.assertIsNotNone(block_reason(turn(("app.py",)), EMPTY_CONFIG))
+        self.assertIsNone(block_reason(turn(("app.py",), active=True), EMPTY_CONFIG))
 
     def test_long_path_lists_are_shortened(self) -> None:
         paths = tuple(f"src/m{i}.py" for i in range(7))
-        reason = block_reason(turn(paths), CONFIG, None)
+        reason = block_reason(turn(paths), CONFIG)
         assert reason is not None
         self.assertIn("7 files: src/m0.py, src/m1.py, src/m2.py, src/m3.py, src/m4.py and 2 more", reason)
+
+
+class WhichRunCoversTheChanges(unittest.TestCase):
+    def changed_between(self, differences: dict[str, set[str]]):
+        return lambda tree: differences[tree]
+
+    def test_no_record_means_missing(self) -> None:
+        self.assertEqual(checks_status(None, ("app.py",), self.changed_between({})), ("missing", ()))
+
+    def test_a_run_covers_the_changes_when_none_of_them_changed_since(self) -> None:
+        # Someone else changed other.py after the run; this session's app.py is as it was checked.
+        status = checks_status(record(("t1",), True), ("app.py",), self.changed_between({"t1": {"other.py"}}))
+        self.assertEqual(status, ("passed", ()))
+
+    def test_a_run_doesnt_cover_files_edited_after_it(self) -> None:
+        status = checks_status(record(("t1",), True), ("app.py",), self.changed_between({"t1": {"app.py"}}))
+        self.assertEqual(status, ("missing", ()))
+
+    def test_any_recorded_tree_can_cover_and_failures_are_reported(self) -> None:
+        trees = self.changed_between({"t0": {"app.py"}, "t1": set()})
+        self.assertEqual(checks_status(record(("t0", "t1"), False, ("unit",)), ("app.py",), trees), ("failed", ("unit",)))
 
 
 class WeakenedTests(unittest.TestCase):

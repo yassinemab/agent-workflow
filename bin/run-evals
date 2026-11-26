@@ -32,10 +32,11 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 
 from aw.evals import Case, Observation, Verdict, grade, load_cases, observe  # noqa: E402
+from aw.state import state_dir  # noqa: E402
 
 CASES = ROOT / "evals" / "cases.json"
 FIXTURE = ROOT / "evals" / "fixture"
-RESULTS_DIR = Path(os.environ.get("AW_STATE_DIR", str(Path.home() / ".cache" / "agent-workflow"))) / "evals"
+RESULTS_DIR = state_dir() / "evals"
 
 
 @dataclass(frozen=True)

@@ -54,8 +54,9 @@ class InstallerTests(unittest.TestCase):
 
         settings = json.loads((self.home / ".claude" / "settings.json").read_text())
         self.assertEqual(settings["env"], {"A": "1", "CLAUDE_CODE_SUBAGENT_MODEL": "sonnet"})
-        agent_hooks = [g for g in settings["hooks"]["PreToolUse"] if g.get("matcher") == "Agent|Task"]
-        self.assertEqual(len(agent_hooks), 1)
+        matchers = [g.get("matcher") for g in settings["hooks"]["PreToolUse"]]
+        self.assertEqual(matchers.count("Agent|Task"), 1)
+        self.assertEqual(matchers.count("Edit|Write|MultiEdit|NotebookEdit"), 1)
         stop_commands = [h["command"] for g in settings["hooks"]["Stop"] for h in g["hooks"]]
         self.assertEqual(stop_commands[0], "say done")
         self.assertTrue(stop_commands[1].endswith('hooks/require_checks.py"'))

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""UserPromptSubmit: remember the working tree's state when the turn starts."""
+"""UserPromptSubmit: a new turn starts, so forget the previous turn's edits."""
 
 from __future__ import annotations
 
@@ -8,14 +8,11 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from aw import hookio, repo, state  # noqa: E402
+from aw import hookio, state  # noqa: E402
 
 
 def handle(data: hookio.HookInput) -> None:
-    root = repo.find_repo_root(hookio.cwd(data))
-    if root is None:
-        return
-    state.record_turn_start(root, hookio.text(data, "session_id"), repo.tree_hash(root))
+    state.start_turn(hookio.text(data, "session_id"))
 
 
 if __name__ == "__main__":

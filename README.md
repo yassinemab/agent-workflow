@@ -29,8 +29,9 @@ One place for how coding agents (Claude Code and Codex) work on this machine: th
 | `guard_rule_files.py` | PreToolUse (Edit, Write, MultiEdit, NotebookEdit, Bash) | Shows a confirmation prompt before writes to `~/agent-workflow`, `~/.claude/CLAUDE.md` or `~/.claude/settings*.json`. In bypass-permissions mode Claude Code shows no prompts, so the user's yes in chat is the gate |
 | `guard_subagent_model.py` | PreToolUse (Agent) | Denies subagents on `opus`/`fable` and forks; the installer also sets `CLAUDE_CODE_SUBAGENT_MODEL=sonnet` |
 | `flag_test_edits.py` | PostToolUse (Edit, Write, MultiEdit) | Warns the agent when an edit removes assertions from a test or adds a skip |
-| `track_turn.py` | UserPromptSubmit | Records the working tree's state when a turn starts |
-| `require_checks.py` | Stop | Blocks ending a turn when code changed and `run-checks` hasn't run on the final state |
+| `track_turn.py` | UserPromptSubmit | Starts a new turn: forgets the previous turn's edits |
+| `track_edits.py` | PreToolUse (Edit, Write, MultiEdit, NotebookEdit) | Records which file this session is about to edit, and its repo's state before the first edit of the turn |
+| `require_checks.py` | Stop | Blocks ending a turn while files this session edited, in any repo, haven't been checked by `run-checks` as they are now. Other sessions' changes don't count; Bash edits aren't tracked |
 
 These are a safety net over shell text and edit content, not a sandbox: a determined workaround (a script that runs git) gets past them. The three guards deny the call when they crash, so a bug can't switch protection off; the other hooks report the error and let the session continue. Every decision is logged to `~/.cache/agent-workflow/events.jsonl`, which `retro` reads. Codex doesn't run these hooks; it relies on the rules alone.
 
