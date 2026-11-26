@@ -1,10 +1,6 @@
-# agent-workflow
+## What
 
-Rules, skills and hooks that make AI coding agents (Claude Code and Codex) work like a careful senior developer. It's built on one principle: **leave the code better than you found it.** Agents ask questions before building, write tests first, get an independent review and prove it works before saying "done". When they spot a flaw in nearby code, they explain it and ask before fixing it. Every mistake becomes a new rule or check, so quality only goes up.
-
-## Why
-
-AI agents are fast, but they make the same mistakes over and over: they duplicate code, over-engineer, weaken tests until they pass, and say "it works" without checking. Rules in a prompt help, but agents forget them. This repo pairs clear rules with a skill for each step and hooks that enforce the rules that must never be broken.
+A toolset to make agents work more consistently across the entire development lifecycle. I created it because I realized my agents were delivering inconsistent quality across my repos (and even within a repo it fluctuated). It's built on the "leave the code better than you found it" principle. Agents ask questions and define acceptance criteria before building, get an independent review and prove it works before ending the turn. It also contains a self-improvement loop, so a spotted mistake becomes a new rule and a new eval case.
 
 ## How a feature gets built
 
@@ -17,6 +13,14 @@ AI agents are fast, but they make the same mistakes over and over: they duplicat
 7. `retro` turns mistakes into new rules or checks, after you approve them.
 
 Bugs go through `fix-bug`: reproduce it first, then fix it. You don't have to name the skills. Describe what you want, and the right one starts.
+
+## Evals
+
+Most of this repo is markdown, so why evals? Because a skill only helps if the agent actually picks it. The agent decides that by reading the skill descriptions, and a small change in wording can make it skip a step. I wanted to know, not guess, whether a request reaches the right skill.
+
+There are 19 cases. Each one runs a real Claude Code session in a throwaway repo and checks which skill it loads first, and that it doesn't touch any code before that. For example, "the invoice total comes out as 15 instead of 1.50, can you look into it?" has to go to `fix-bug`, even though it never says "bug".
+
+The first run passed 16 of 19, and two of the failures were real. Asking "what's going on" about an error got a quick answer instead of the bug workflow, and "review my change" got a review from the same agent instead of independent reviewers. After rewording two skill descriptions, all 19 pass. I rerun them after every change to a skill or rule.
 
 ## What's inside
 
