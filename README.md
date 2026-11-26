@@ -16,11 +16,9 @@ Bugs go through `fix-bug`: reproduce it first, then fix it. You don't have to na
 
 ## Evals
 
-Most of this repo is markdown, so why evals? Because a skill only helps if the agent actually picks it. The agent decides that by reading the skill descriptions, and a small change in wording can make it skip a step. I wanted to know, not guess, whether a request reaches the right skill.
-
-There are 19 cases. Each one runs a real Claude Code session in a throwaway repo and checks which skill it loads first, and that it doesn't touch any code before that. For example, "the invoice total comes out as 15 instead of 1.50, can you look into it?" has to go to `fix-bug`, even though it never says "bug".
-
-The first run passed 16 of 19, and two of the failures were real. Asking "what's going on" about an error got a quick answer instead of the bug workflow, and "review my change" got a review from the same agent instead of independent reviewers. After rewording two skill descriptions, all 19 pass. I rerun them after every change to a skill or rule.
+- **Why:** a skill only helps if the agent picks it, and one wording change can make it skip a step. Evals make that testable.
+- **What:** 19 real Claude Code sessions in a throwaway repo. A case passes when the right skill loads first, before any code is touched.
+- **Result:** the first run caught two real misses. "What's going on" about an error skipped `fix-bug`, and "review my change" skipped `review-change`. After two rewordings, 19 of 19 pass.
 
 ## What's inside
 
