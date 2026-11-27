@@ -7,8 +7,9 @@ Usage: run-evals [--case ID ...] [--model MODEL] [--jobs N] [--repeat N]
 Each case runs `claude -p` headless in a throwaway copy of evals/fixture, in
 dontAsk permission mode (tools that would need approval are refused, so
 nothing outside the copy can change). A run stops as soon as its verdict is
-known. Each case costs real API usage, roughly $0.10-0.50 on the default
-model, so this is not part of run-checks. Run it after changing a skill
+known. Runs use Sonnet by default (`--model opus` to check the model you use
+day to day). Each case is a real session on your subscription, so this is
+not part of run-checks. Run it after changing a skill
 description or a global rule.
 """
 
@@ -16,14 +17,9 @@ from __future__ import annotations
 
 import argparse
 import json
-import os
-import shutil
-import subprocess
 import sys
 import tempfile
-import threading
 import time
-from collections.abc import Iterator
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import asdict, dataclass
 from pathlib import Path
@@ -32,6 +28,7 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 
 from aw.evals import Case, Observation, Verdict, grade, load_cases, observe  # noqa: E402
+from aw.sessions import claude_bin, fixture_copy, run_session  # noqa: E402
 from aw.state import state_dir  # noqa: E402
 
 CASES = ROOT / "evals" / "cases.json"
@@ -58,24 +55,9 @@ class Outcome:
     final_text: str
 
 
-def _fixture_copy(tmp: Path, case: Case) -> Path:
-    repo = tmp / "billing-app"
-    shutil.copytree(FIXTURE, repo)
-    for args in (["init", "-q", "-b", "main"], ["add", "-A"]):
-        subprocess.run(["git", *args], cwd=repo, check=True, capture_output=True)
-    subprocess.run(
-        ["git", "-c", "user.email=evals@example.com", "-c", "user.name=evals", "commit", "-qm", "fixture"],
-        cwd=repo, check=True, capture_output=True,
-    )
-    for name, content in case.uncommitted:
-        (repo / name).parent.mkdir(parents=True, exist_ok=True)
-        (repo / name).write_text(content)
-    return repo
-
-
 def _command(case: Case, settings: Settings) -> list[str]:
     command = [
-        os.environ.get("AW_CLAUDE_BIN", "claude"), "-p", case.prompt,
+        claude_bin(), "-p", case.prompt,
         "--output-format", "stream-json", "--verbose",
         "--permission-mode", "dontAsk",
         "--max-budget-usd", str(settings.budget_usd),
@@ -84,39 +66,21 @@ def _command(case: Case, settings: Settings) -> list[str]:
     return command + (["--model", settings.model] if settings.model else [])
 
 
-def _lines(process: subprocess.Popen[str]) -> Iterator[str]:
-    assert process.stdout is not None
-    yield from process.stdout
-
-
 def run_case(case: Case, settings: Settings) -> Outcome:
-    started = time.monotonic()
     with tempfile.TemporaryDirectory(prefix=f"aw-eval-{case.id}-") as tmp:
-        repo = _fixture_copy(Path(tmp), case)
-        process = subprocess.Popen(
-            _command(case, settings), cwd=repo, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, text=True
+        repo = fixture_copy(FIXTURE, Path(tmp), case.uncommitted)
+        end = run_session(
+            _command(case, settings), repo, settings.timeout_s, lambda lines: observe(lines, case, settings.max_calls)
         )
-        watchdog = threading.Timer(settings.timeout_s, process.kill)
-        watchdog.start()
-        try:
-            seen: Observation = observe(_lines(process), case, settings.max_calls)
-        finally:
-            watchdog.cancel()
-            if process.poll() is None:
-                process.terminate()
-            try:
-                process.wait(timeout=10)
-            except subprocess.TimeoutExpired:
-                process.kill()
-    timed_out = time.monotonic() - started >= settings.timeout_s
-    verdict = Verdict(False, f"timed out after {settings.timeout_s}s") if timed_out and not seen.calls else grade(seen, case)
+    seen: Observation = end.value
+    verdict = Verdict(False, f"timed out after {settings.timeout_s}s") if end.timed_out and not seen.calls else grade(seen, case)
     return Outcome(
         case_id=case.id,
         passed=verdict.passed,
         reason=verdict.reason,
         tools=[f"Skill:{c.skill}" if c.skill else c.name for c in seen.calls],
         cost_usd=seen.cost_usd,
-        seconds=round(time.monotonic() - started, 1),
+        seconds=end.seconds,
         final_text=seen.final_text,
     )
 
@@ -124,7 +88,7 @@ def run_case(case: Case, settings: Settings) -> Outcome:
 def main(argv: list[str]) -> int:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--case", action="append", default=[], help="run only this case id (repeatable)")
-    parser.add_argument("--model", help="model for the runs (default: Claude Code's default)")
+    parser.add_argument("--model", default="sonnet", help="model for the runs (default: sonnet, the cheaper tier)")
     parser.add_argument("--jobs", type=int, default=3, help="cases to run in parallel")
     parser.add_argument("--repeat", type=int, default=1, help="runs per case, to see flakiness")
     parser.add_argument("--max-calls", type=int, default=8, help="tool calls before a case counts as 'no skill'")

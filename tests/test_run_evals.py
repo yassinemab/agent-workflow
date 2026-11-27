@@ -13,8 +13,11 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 
 FAKE_CLAUDE = """#!/usr/bin/env python3
-import json, sys, time
+import json, os, pathlib, sys, time
 prompt = sys.argv[sys.argv.index("-p") + 1]
+model = sys.argv[sys.argv.index("--model") + 1] if "--model" in sys.argv else "(default)"
+with open(pathlib.Path(os.environ["AW_STATE_DIR"]) / "models.txt", "a") as log:
+    log.write(model + "\\n")
 def say(*tools):
     content = [{"type": "tool_use", "name": n, "input": a} for n, a in tools]
     print(json.dumps({"type": "assistant", "message": {"content": content}}), flush=True)
@@ -51,6 +54,8 @@ class RunEvals(unittest.TestCase):
             self.assertEqual(len(reports), 1)
             outcomes = json.loads(reports[0].read_text())["outcomes"]
             self.assertEqual({o["case_id"] for o in outcomes}, {"bug-indirect", "feature-direct", "question-only"})
+            # Evals run on the cheaper model unless told otherwise.
+            self.assertEqual((Path(tmp) / "models.txt").read_text().split(), ["sonnet"] * 3)
 
     def test_unknown_case_is_an_error(self) -> None:
         result = subprocess.run(

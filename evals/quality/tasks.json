@@ -1,0 +1,18 @@
+[
+  {
+    "id": "dutch-amounts",
+    "prompt": "When a customer enters 1,5 as the price on an invoice line, the invoice total comes out as 15 instead of 1.50. Please fix it.",
+    "allowed": ["billing/invoice.py", "tests/**"]
+  },
+  {
+    "id": "line-discount",
+    "prompt": "The spec in specs/discount.md is approved, including its design. Build it.",
+    "allowed": ["billing/invoice.py", "tests/**", "docs/**", "specs/**"],
+    "spec": "specs/discount.md"
+  },
+  {
+    "id": "reminders-cleanup",
+    "prompt": "billing/reminders.py has grown messy. Clean it up without changing what it does.",
+    "allowed": ["billing/reminders.py", "tests/**"]
+  }
+]
