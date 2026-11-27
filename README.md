@@ -14,6 +14,8 @@ Tools to make agents work more consistently across the entire development lifecy
 
 Bugs go through `fix-bug`: reproduce it first, then fix it. You don't have to name the skills. Describe what you want, and the right one starts.
 
+Features that use an LLM or an agent also get `agent-harness`. It picks the simplest setup that works (one call, a chain of prompts, or a real agent) and adds its own checks to scoping, design, building and review.
+
 ## Evals
 
 Most of this repo is markdown, so why add evals? Because a skill only helps if the agent actually picks it. The agent decides that by reading the skill descriptions, and a small change in wording can make it skip a step. I wanted to know for sure whether a request reaches the right skill.
