@@ -1,11 +1,10 @@
 #!/usr/bin/env python3
-"""Run the project's full checks (from its workflow.json) and record the result.
+"""Run the project's full checks (from its workflow.json).
 
 Usage: run-checks [--list]
 
-Runs every check from the repo root, streams its output, prints a summary and
-records which working-tree state the run covered, so the require-checks hook
-knows the current state was verified. Exits 1 if any check failed.
+Runs every check from the repo root, streams its output and prints a summary.
+Exits 1 if any check failed.
 """
 
 from __future__ import annotations
@@ -19,7 +18,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from aw import config, repo, state  # noqa: E402
+from aw import config, repo  # noqa: E402
 
 
 def run_with_timeout(command: str, cwd: Path, timeout_minutes: float) -> int | None:
@@ -54,7 +53,6 @@ def main(argv: list[str]) -> int:
         print(__doc__, file=sys.stderr)
         return 2
 
-    tree_before = repo.tree_hash(root)
     failed: list[str] = []
     timed_out: set[str] = set()
     timings: list[tuple[str, bool, float]] = []
@@ -70,21 +68,10 @@ def main(argv: list[str]) -> int:
         if not passed:
             failed.append(check.name)
 
-    # Checks may write files that aren't ignored; the state after the run counts too.
-    trees = tuple(dict.fromkeys([tree_before, repo.tree_hash(root)]))
-    state.record_checks(
-        root,
-        state.CheckRecord(
-            trees=trees, passed=not failed, failed=tuple(failed), finished_at=time.time()
-        ),
-    )
-
     print(f"\n=== run-checks summary ({workflow.source})")
     for name, passed, seconds in timings:
         note = ", timed out" if name in timed_out else ""
         print(f"{'PASS' if passed else 'FAIL'}  {name}  ({seconds:.1f}s{note})")
-    if len(trees) > 1:
-        print("note: the checks changed files in the working tree (not ignored by git).")
     return 1 if failed else 0
 
 

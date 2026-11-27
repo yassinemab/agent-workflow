@@ -15,7 +15,6 @@ These add to the global rules in `AGENTS.md` (imported above) for Claude Code on
   - `guard-rule-files`: shows a confirmation prompt before writes to `~/agent-workflow`, `~/.claude/CLAUDE.md` or `~/.claude/settings*.json`. Claude Code shows no prompts in bypass-permissions mode, so there the user's explicit yes in chat is the only gate (`AGENTS.md` §11).
   - `guard-subagent-model`: blocks subagents on `opus` or `fable`, and forks, which always run on the main model.
   - `flag-test-edits`: warns when an edit removes assertions from a test or adds a skip.
-  - `track-turn`, `track-edits` and `require-checks`: block ending a turn while code this session edited (with Edit, Write, MultiEdit or NotebookEdit, in any repo) hasn't been checked in its current state. Other sessions' changes in a shared checkout don't count. Files changed through Bash aren't tracked, so run the checks after those yourself. `run-checks` records which state of the working tree it checked. Running the test commands by hand doesn't satisfy `require-checks`.
 
   The guards deny the call if they crash. Every hook decision is logged to `~/.cache/agent-workflow/events.jsonl`. When a hook blocks you, follow its message. Don't work around it.
 - **Plan mode:** present an approved spec or design with `ExitPlanMode`.

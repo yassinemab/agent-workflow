@@ -30,13 +30,10 @@ MARKER = "agent-workflow/hooks/"
 
 # (event, matcher or None, script)
 HOOKS: tuple[tuple[str, str | None, str], ...] = (
-    ("UserPromptSubmit", None, "track_turn.py"),
-    ("Stop", None, "require_checks.py"),
     ("PreToolUse", "Bash", "guard_commands.py"),
     ("PreToolUse", "Edit|Write|MultiEdit|NotebookEdit|Bash", "guard_rule_files.py"),
     ("PostToolUse", "Edit|Write|MultiEdit", "flag_test_edits.py"),
     ("PreToolUse", "Agent|Task", "guard_subagent_model.py"),
-    ("PreToolUse", "Edit|Write|MultiEdit|NotebookEdit", "track_edits.py"),
 )
 # Subagents without an explicit model run on this one (AGENTS.md section 1).
 ENV = {"CLAUDE_CODE_SUBAGENT_MODEL": "sonnet"}

@@ -24,7 +24,27 @@ class InstallerTests(unittest.TestCase):
         settings = self.home / ".claude" / "settings.json"
         settings.parent.mkdir(parents=True)
         settings.write_text(
-            json.dumps({"env": {"A": "1"}, "hooks": {"Stop": [{"hooks": [{"type": "command", "command": "say done"}]}]}})
+            json.dumps(
+                {
+                    "env": {"A": "1"},
+                    "hooks": {
+                        "Stop": [
+                            {"hooks": [{"type": "command", "command": "say done"}]},
+                            # Left by an earlier install; the hook no longer exists.
+                            {"hooks": [{"type": "command", "command": '"/x/agent-workflow/hooks/require_checks.py"'}]},
+                        ],
+                        "UserPromptSubmit": [
+                            {"hooks": [{"type": "command", "command": '"/x/agent-workflow/hooks/track_turn.py"'}]},
+                        ],
+                        "PreToolUse": [
+                            {
+                                "matcher": "Edit|Write|MultiEdit|NotebookEdit",
+                                "hooks": [{"type": "command", "command": '"/x/agent-workflow/hooks/track_edits.py"'}],
+                            },
+                        ],
+                    },
+                }
+            )
         )
         (self.home / ".codex").mkdir()
         (self.home / ".codex" / "AGENTS.md").write_text("old codex rules")
@@ -56,10 +76,10 @@ class InstallerTests(unittest.TestCase):
         self.assertEqual(settings["env"], {"A": "1", "CLAUDE_CODE_SUBAGENT_MODEL": "sonnet"})
         matchers = [g.get("matcher") for g in settings["hooks"]["PreToolUse"]]
         self.assertEqual(matchers.count("Agent|Task"), 1)
-        self.assertEqual(matchers.count("Edit|Write|MultiEdit|NotebookEdit"), 1)
         stop_commands = [h["command"] for g in settings["hooks"]["Stop"] for h in g["hooks"]]
-        self.assertEqual(stop_commands[0], "say done")
-        self.assertTrue(stop_commands[1].endswith('hooks/require_checks.py"'))
+        self.assertEqual(stop_commands, ["say done"])
+        self.assertNotIn("UserPromptSubmit", settings["hooks"])
+        self.assertNotIn("Edit|Write|MultiEdit|NotebookEdit", matchers)
         self.assertEqual(settings["hooks"]["PreToolUse"][0]["matcher"], "Bash")
 
     def test_backs_up_replaced_files(self) -> None:

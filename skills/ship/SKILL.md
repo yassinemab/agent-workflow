@@ -1,6 +1,6 @@
 ---
 name: ship
-description: Commit a finished change and, when asked, push it and open a PR, with evidence. Runs the full checks fresh and makes sure the change was reviewed. Stages only this conversation's files, never other sessions' work. Writes a commit message that explains why, and a PR body with the acceptance-criteria table, test evidence, migrations, blast radius, whether it can be undone, and rollback steps. It never pushes to main/master or force-pushes, and asks before anything leaves the machine. Use only when the user explicitly asks to commit, ship, push or open a PR.
+description: Commit a finished change and, when asked, push it and open a PR, with evidence. Runs the checks fresh (full for a built feature, targeted otherwise) and makes sure the change was reviewed. Stages only this conversation's files, never other sessions' work. Writes a commit message that explains why, and a PR body with the acceptance-criteria table, test evidence, migrations, blast radius, whether it can be undone, and rollback steps. It never pushes to main/master or force-pushes, and asks before anything leaves the machine. Use only when the user explicitly asks to commit, ship, push or open a PR.
 disable-model-invocation: true
 ---
 
@@ -14,7 +14,7 @@ Read the project profile first. It says which branch is the base, what pushing t
 
 - **The user asked** to commit, push or open a PR. If they only asked to commit, stop after step 4.
 - **The change was reviewed:** `review-change` ran on it with no must-fix findings left, or the user explicitly waived the review. If neither, run it now.
-- **Full checks, fresh:** run `~/agent-workflow/bin/run-checks` now, even if it ran earlier. New failures (not on the profile's baseline list) block shipping. Report them, and don't commit unless the user decides otherwise with the failures in front of them.
+- **Checks, fresh:** run them now, even if they ran earlier. For a feature built with `build-feature`, that's the full suite (`~/agent-workflow/bin/run-checks`); for anything else, the tests of the modules the change touches (`AGENTS.md` §4). New failures (not on the profile's baseline list) block shipping. Report them, and don't commit unless the user decides otherwise with the failures in front of them.
 
 ## 2. Branch
 

@@ -29,15 +29,13 @@ A profile folder can also hold:
     {"name": "backend tests", "cwd": "backend", "run": ".venv/bin/python manage.py test app.tests"},
     {"name": "frontend typecheck", "cwd": "frontend", "run": "npx tsc -p tsconfig.app.json --noEmit", "timeout_minutes": 5}
   ],
-  "no_checks_needed_for": ["*.md", "docs/**"],
   "blocked_commands": [
     {"pattern": "\\bmysqldump\\b", "reason": "A live mysqldump locks every table and takes the API down."}
   ]
 }
 ```
 
-- `checks`: the full suite, run in order from the repo root (`cwd` is relative to it). `run-checks` runs all of them and records the result for the current state of the working tree. A check that runs longer than its `timeout_minutes` (default 20) is killed and counts as failed.
-- `no_checks_needed_for`: glob patterns for files whose changes don't need checks. `*` matches within one path segment and `**` across segments. The default is `["*.md", "**/*.md", "docs/**"]`.
+- `checks`: the full suite, run in order from the repo root (`cwd` is relative to it). `run-checks` runs all of them; agents run it only for features built with `build-feature` (`AGENTS.md` §4). A check that runs longer than its `timeout_minutes` (default 20) is killed and counts as failed.
 - `blocked_commands`: Python regular expressions matched against every shell command an agent runs in this repo, with the reason shown when one is blocked.
 
 ## No profile yet

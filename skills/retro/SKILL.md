@@ -47,7 +47,7 @@ Ask for a yes or no per proposal. Use the harness's question tool if it has one,
 ## 4. Apply only what was approved
 
 - Make each approved change in `~/agent-workflow` (or the project, for rungs 1, 2 and 5).
-- For hook and check changes, add the test first. Watch it fail, then make the change, then run the workflow's checks (`cd ~/agent-workflow && bin/run-checks`).
+- For hook and check changes, add the test first. Watch it fail, then make the change, then run the workflow's checks (`cd ~/agent-workflow && bin/run-checks`). Its suite is fast, so it counts as targeted (`AGENTS.md` §4), and it includes the secret scan this repo needs.
 - Commit each approved change in `~/agent-workflow` with a message that names the incident it prevents. The user's yes to the change includes this local commit, but not a push.
 - If a change touches the installed layout (a new skill, agent or hook), run `python3 ~/agent-workflow/install.py`.
 - After a change to a skill or a rule, run `~/agent-workflow/bin/run-evals` and report the result. It runs headless Claude sessions on the user's subscription (a few minutes, roughly a long session's worth of usage), so say that before running it.
