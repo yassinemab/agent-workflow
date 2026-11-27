@@ -1,6 +1,6 @@
 ---
 name: fix-bug
-description: Fix a bug at its root cause, proven by a test. First build a command that goes red on this exact bug, reproduce and minimize it, rank falsifiable hypotheses and confirm the cause with evidence. Then write the regression test, watch it fail, make the smallest fix, and run the full checks. It looks for the same bug elsewhere, cleans up every debug line, never weakens a test, and reports the root cause with evidence. Use this whenever the user reports a bug, error, crash, regression, failing test, wrong number or "this doesn't work", or asks to debug, diagnose, investigate or fix something, even if they don't say "bug". Also when they only ask why something fails or "what's going on" with an error or a wrong result: that is a bug report, not just a question. Not for new behavior (use scope-feature) or for cleanups that change nothing visible (use refine-code).
+description: Fix a bug at its root cause, proven by a test. First build a command that goes red on this exact bug, reproduce and minimize it, rank falsifiable hypotheses and confirm the cause with evidence. Then write the regression test, watch it fail, make the smallest fix, and run the tests of the touched modules. It looks for the same bug elsewhere, cleans up every debug line, never weakens a test, and reports the root cause with evidence. Use this whenever the user reports a bug, error, crash, regression, failing test, wrong number or "this doesn't work", or asks to debug, diagnose, investigate or fix something, even if they don't say "bug". Also when they only ask why something fails or "what's going on" with an error or a wrong result: that is a bug report, not just a question. Not for new behavior (use scope-feature) or for cleanups that change nothing visible (use refine-code).
 ---
 
 # Fix bug
@@ -53,11 +53,11 @@ The root cause is confirmed when you can explain the full chain from input to wr
 
 ## 6. Finish
 
-1. Run `~/agent-workflow/bin/run-checks`. Compare failures with the profile's known baseline. If you fixed a baseline failure, say so, so the profile can be updated.
+1. Run the tests of every module you touched (the profile's single-module commands), not the full suite (`AGENTS.md` §4). Compare failures with the profile's known baseline. If you fixed a baseline failure, say so, so the profile can be updated.
 2. Report following `AGENTS.md` §11:
    - **Root cause**, with `file:line` and the chain from input to wrong output.
    - **The reproduction command**: red before the fix, green after.
-   - **The regression test**, and the full checks result.
+   - **The regression test**, and the targeted test result.
    - Other places with the same pattern, and any affected data.
    - The failure-pattern self-check, adjacent-code findings and rule proposals.
 3. Offer `review-change` for a non-trivial fix. Don't commit or push unless the user asks.

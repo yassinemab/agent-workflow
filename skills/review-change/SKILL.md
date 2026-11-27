@@ -59,5 +59,5 @@ Scope creep: <code no criterion asks for, with file:line, or "none">
 ```
 
 Then:
-- **The change is this conversation's own work:** fix the must-fix findings now, run `~/agent-workflow/bin/run-checks`, and run the review again on the fixed diff with fresh reviewers. Stop when no must-fix findings remain, or after three rounds, and report what's left. Ask the user about should-fix findings and nits.
+- **The change is this conversation's own work:** fix the must-fix findings now, run the checks `AGENTS.md` §4 asks for (full for a feature built with `build-feature`, targeted otherwise), and run the review again on the fixed diff with fresh reviewers. Stop when no must-fix findings remain, or after three rounds, and report what's left. Ask the user about should-fix findings and nits.
 - **Someone else's change:** report only. Fix nothing without the user's yes.

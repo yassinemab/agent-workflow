@@ -12,8 +12,8 @@ Before any work, decide which path the request takes, and say it in one line ("S
 
 | Path | When | What to do |
 |---|---|---|
-| **Quick** | A question or explanation, or a trivial edit with an obvious result: copy, a label, a rename, a config value, a typo | Answer, or make the edit. Run the checks if code changed. No skills, no subagents |
-| **Small** | A change to existing behavior that the request fully specifies, in one or two files: no choice left for you to make, and no new data model, dependency, external side effect, concurrency or security impact. A bug with an obvious local cause counts | Bugs: `fix-bug`, small lane. Anything else: state the plan and how you'll check it in two or three lines, write the test first, make the change, run the checks, and check it against §10. No spec, no design, no review subagents |
+| **Quick** | A question or explanation, or a trivial edit with an obvious result: copy, a label, a rename, a config value, a typo | Answer, or make the edit. Run the targeted tests if code changed. No skills, no subagents |
+| **Small** | A change to existing behavior that the request fully specifies, in one or two files: no choice left for you to make, and no new data model, dependency, external side effect, concurrency or security impact. A bug with an obvious local cause counts | Bugs: `fix-bug`, small lane. Anything else: state the plan and how you'll check it in two or three lines, write the test first, make the change, run the targeted tests, and check it against §10. No spec, no design, no review subagents |
 | **Large** | Everything else: any new capability for users (a feature, field, setting, export, report or flow), even when the code would be small; a data model change; several modules; external side effects; concurrency; security; an LLM feature; or any decision the request leaves open (a format, validation, rounding, naming users will see) | The full lifecycle below |
 
 ### The full lifecycle (large path)
@@ -24,12 +24,12 @@ Load the skill for each stage and follow it; don't improvise the procedure.
 |---|---|---|
 | Scope a feature | `scope-feature` | the user approved the spec and its acceptance criteria |
 | Design it | `design-feature` | the user approved the design; ADRs written |
-| Build it | `build-feature` | every acceptance criterion has a passing test; checks ran |
+| Build it | `build-feature` | every acceptance criterion has a passing test; full checks ran |
 | Fix a bug | `fix-bug` | a test reproduced the bug before the fix and passes after it |
 | Improve code without changing behavior | `refine-code` | a fresh reviewer finds nothing worth changing; behavior unchanged |
 | Review a change | `review-change` | fresh reviewers report no must-fix findings |
 | Check it in the running app | `feature-qa`, `check-design` | report written |
-| Commit, PR, ship | `ship` | the user asked for it; full checks ran |
+| Commit, PR, ship | `ship` | the user asked for it; checks ran (full for a built feature, targeted otherwise) |
 | Record a decision | `adr` | ADR file written |
 | Learn from the work | `retro` | the user approved or declined each proposal |
 
@@ -81,7 +81,10 @@ Use a classic design pattern (strategy, adapter, factory, observer…) only when
 - Mock only at system boundaries (network, LLM, payment, email, clock), never your own modules.
 - Expected values are literals written from the spec, never recomputed by the code under test.
 - **Never weaken a test to make it pass.** Weakening is deleting or skipping a test, removing or loosening an assertion, changing an expected value, widening a tolerance, catching the error the test expects, or mocking out the thing under test. When a test fails, fix the code. A test may change only when the agreed behavior changed. Then name the decision that changed it in your report. If you realize you weakened a test, you did not do your job: revert it and tell the user.
-- **Run the checks.** Run `~/agent-workflow/bin/run-checks` (or the project's test commands from its profile) after your changes and before ending any turn in which code changed. It runs the full suite. Report the command and the result. Failures listed as known in the project profile are baseline; any other failure means you're not done.
+- **Run the checks.** Before ending any turn in which code changed, run tests and report the command and the result. How many depends on the path:
+  - **Full checks** (`~/agent-workflow/bin/run-checks`, the whole suite) only for a feature that went through the full lifecycle (`scope-feature`, `design-feature`, `build-feature`).
+  - **Targeted tests** for everything else (quick and small changes, bug fixes, refactors, review fixes): the tests of the modules you touched and of the modules that call what you changed, with the profile's single-module commands. Run the type checker on the touched files when the project has one. When a project's full suite runs in under a minute, running it counts as targeted.
+  - Failures listed as known in the project profile are baseline; any other failure means you're not done.
 
 ## 5. Types
 
@@ -142,11 +145,11 @@ Check your work against this list. The last column says what catches each patter
 | Security holes | Missing authorization or tenant scoping, unsafe rendering | §9, review |
 | Big rewrites | A whole file rewritten instead of a targeted change | §7, review |
 | Missing error handling | The happy path works, the rest doesn't | acceptance criteria, review |
-| Claiming done without evidence | "Should work" with no command run | §4, `require-checks` hook |
+| Claiming done without evidence | "Should work" with no command run | §4, §11 |
 
 ## 11. End of every turn that changed code
 
-1. **Checks:** the full checks ran on the final state. Report the command and the result, including known baseline failures. The `require-checks` hook enforces this.
+1. **Checks:** the checks §4 asks for ran on the final state: full for a built feature, targeted otherwise. Report the command and the result, including known baseline failures.
 2. **Self-check:** compare what you did this turn with §10. Name any pattern you hit, and fix it if it's in your own change.
 3. **Adjacent code:** report findings from §8 and ask for permission.
 4. **Rule proposals:** if you hit a failure pattern, the user corrected you, or a check caught you, propose one improvement to these rules. Show the exact change (file, the line added or edited, why). Prefer a check that enforces it (a hook, lint rule or test) over more text. Check the existing rules first and reword one instead of adding a near-duplicate. Keep everything in `~/agent-workflow` generic: no project or company names, hosts, customers, credentials or personal data. Project facts go in the project profile. Change nothing in `~/agent-workflow` without the user's explicit yes in chat. After an approved change to a skill or a rule, rerun the evals (`~/agent-workflow/bin/run-evals`). Make no proposal when nothing went wrong.

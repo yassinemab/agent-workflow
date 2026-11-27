@@ -11,8 +11,9 @@ from typing import cast
 
 from aw.repo import repo_name
 
-DEFAULT_NO_CHECKS_NEEDED_FOR: tuple[str, ...] = ("*.md", "**/*.md", "docs/**")
 DEFAULT_TIMEOUT_MINUTES = 20
+# Keys that older workflow.json files may still have; accepted and ignored.
+RETIRED_KEYS = frozenset({"no_checks_needed_for"})
 
 
 class ConfigError(ValueError):
@@ -37,14 +38,12 @@ class BlockedCommand:
 class WorkflowConfig:
     source: Path | None
     checks: tuple[Check, ...]
-    no_checks_needed_for: tuple[str, ...]
     blocked_commands: tuple[BlockedCommand, ...]
 
 
 EMPTY_CONFIG = WorkflowConfig(
     source=None,
     checks=(),
-    no_checks_needed_for=DEFAULT_NO_CHECKS_NEEDED_FOR,
     blocked_commands=(),
 )
 
@@ -78,26 +77,20 @@ def parse_config(raw: object, source: Path) -> WorkflowConfig:
     if not isinstance(raw, dict):
         raise ConfigError(f"{source}: the top level must be an object")
     data = cast(dict[str, object], raw)
-    unknown = set(data) - {"checks", "no_checks_needed_for", "blocked_commands"}
+    unknown = set(data) - {"checks", "blocked_commands"} - RETIRED_KEYS
     if unknown:
         raise ConfigError(f"{source}: unknown keys: {', '.join(sorted(unknown))}")
     return WorkflowConfig(
         source=source,
         checks=tuple(_parse_check(item, source) for item in _list(data, "checks", source)),
-        no_checks_needed_for=tuple(
-            _str(item, "no_checks_needed_for", source)
-            for item in _list(data, "no_checks_needed_for", source, DEFAULT_NO_CHECKS_NEEDED_FOR)
-        ),
         blocked_commands=tuple(
             _parse_blocked(item, source) for item in _list(data, "blocked_commands", source)
         ),
     )
 
 
-def _list(
-    data: dict[str, object], key: str, source: Path, default: tuple[str, ...] = ()
-) -> list[object]:
-    value = data.get(key, list(default))
+def _list(data: dict[str, object], key: str, source: Path) -> list[object]:
+    value = data.get(key, [])
     if not isinstance(value, list):
         raise ConfigError(f"{source}: `{key}` must be a list")
     return cast(list[object], value)
