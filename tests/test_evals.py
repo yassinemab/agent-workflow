@@ -50,6 +50,13 @@ class Grading(unittest.TestCase):
         self.assertTrue(grade(seen(ToolCall("Read"), ToolCall("Edit"), finished=True), QUESTION).passed)
         self.assertFalse(grade(seen(ToolCall("Skill", "scope-feature")), QUESTION).passed)
 
+    def test_none_can_be_one_of_several_acceptable_outcomes(self) -> None:
+        either = Case("small", "strip spaces", ("none", "fix-bug"))
+        self.assertTrue(grade(seen(ToolCall("Read"), finished=True), either).passed)
+        self.assertTrue(grade(seen(ToolCall("Skill", "fix-bug")), either).passed)
+        verdict = grade(seen(ToolCall("Skill", "scope-feature")), either)
+        self.assertEqual((verdict.passed, verdict.reason), (False, "used scope-feature, expected none or fix-bug"))
+
     def test_a_failed_run_fails(self) -> None:
         verdict = grade(Observation(error="error_during_execution"), BUG)
         self.assertEqual(verdict.reason, "run failed: error_during_execution")

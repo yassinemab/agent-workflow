@@ -17,5 +17,8 @@
   {"id": "retro", "prompt": "That feature is done. Let's look back at what went wrong in how you worked and improve the workflow.", "expect_skill": "retro"},
   {"id": "harness-audit", "prompt": "Is our AI reminder-email agent production-ready? What's missing in its harness?", "expect_skill": "agent-harness"},
   {"id": "question-only", "prompt": "What does parse_amount do?", "expect_skill": "none", "notes": "A plain question needs no workflow skill."},
-  {"id": "tiny-tweak", "prompt": "In parse_amount's docstring, change the word 'typed' to 'entered'.", "expect_skill": "none", "notes": "A one-line tweak needs no scoping."}
+  {"id": "tiny-tweak", "prompt": "In parse_amount's docstring, change the word 'typed' to 'entered'.", "expect_skill": "none", "notes": "A one-line tweak needs no scoping."},
+  {"id": "small-feature", "prompt": "Make reminder_text strip spaces around the customer's name, so ' Jan ' becomes 'Jan'.", "expect_skill": ["none", "fix-bug"], "notes": "A small, clear change in one file takes the small path: no scoping. fix-bug's small lane (test first, smallest fix) is also fine."},
+  {"id": "small-bug", "prompt": "parse_amount('') raises decimal.InvalidOperation. It should raise ValueError('Empty amount') instead.", "expect_skill": "fix-bug", "notes": "Still a bug, so fix-bug, but its small lane."},
+  {"id": "quick-rename", "prompt": "Rename the variable txt in billing/reminders.py to text.", "expect_skill": "none", "notes": "A trivial edit takes the quick path."}
 ]

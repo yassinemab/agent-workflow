@@ -36,6 +36,11 @@ class Case:
     def expects_no_skill(self) -> bool:
         return self.expect_skills == (NO_SKILL,)
 
+    @property
+    def allows_no_skill(self) -> bool:
+        """"none" is one of the acceptable outcomes, so edits without a skill are fine."""
+        return NO_SKILL in self.expect_skills
+
 
 @dataclass(frozen=True)
 class ToolCall:
@@ -143,7 +148,7 @@ def decided(seen: Observation, case: Case, max_calls: int) -> bool:
     for call in seen.calls:
         if call.name == "Skill":
             return True
-        if call.name in EDIT_TOOLS and not case.expects_no_skill:
+        if call.name in EDIT_TOOLS and not case.allows_no_skill:
             return True
     return False
 
@@ -156,15 +161,15 @@ def grade(seen: Observation, case: Case) -> Verdict:
         if call.name == "Skill":
             first_skill = call.skill
             break
-        if call.name in EDIT_TOOLS and not case.expects_no_skill:
+        if call.name in EDIT_TOOLS and not case.allows_no_skill:
             return Verdict(False, f"tried {call.name} before loading a skill")
 
-    if case.expects_no_skill:
-        if first_skill is not None:
-            return Verdict(False, f"used skill {first_skill}, expected none")
-        return Verdict(True, "no skill, as expected")
     if first_skill is None:
+        if case.allows_no_skill:
+            return Verdict(True, "no skill, as expected")
         return Verdict(False, f"no skill within {len(seen.calls)} tool call(s)")
-    if first_skill not in case.expect_skills:
-        return Verdict(False, f"used {first_skill}, expected {' or '.join(case.expect_skills)}")
-    return Verdict(True, f"used {first_skill}")
+    if first_skill in case.expect_skills:
+        return Verdict(True, f"used {first_skill}")
+    if case.expects_no_skill:
+        return Verdict(False, f"used skill {first_skill}, expected none")
+    return Verdict(False, f"used {first_skill}, expected {' or '.join(case.expect_skills)}")

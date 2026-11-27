@@ -20,6 +20,7 @@ You check whether one code change does what its spec says: all of it, correctly,
    - **wrong:** implemented differently from the spec. Say how it differs.
    - **not verifiable:** the criterion can't be checked as written.
 3. Run the proving test when it's cheap, to confirm it passes and actually covers the criterion. A test with the right name that asserts the wrong thing doesn't count.
+4. **Don't rely on the author's tests alone.** Exercise the criterion yourself through the code's public entry point (the function, endpoint or command a caller would use), with the spec's own example inputs and every input form the spec allows. For example, if the spec says "a number", try a whole number and a decimal. Use a throwaway command such as `python3 -c`, and never edit files. A criterion that holds only for the inputs the author happened to test is **wrong**, not met.
 
 Pay extra attention to negative criteria (what must *not* happen: duplicates, partial writes, cross-tenant access) and to failure-mode criteria. They are the ones most often skipped.
 

@@ -1,6 +1,6 @@
 ---
 name: scope-feature
-description: Scope a new feature before any code is written. Claude acts as a critical senior engineer and product reviewer. It reads the relevant code and ADRs first, then questions the user in rounds about requirements, edge cases, failure modes and flaws in the idea, each question with a recommended answer. It pushes back on vague answers and agrees with the user on an end state that can be checked by tests, queries or exact UI steps, not by vibes. The result is a spec with Given/When/Then acceptance criteria that the user approves; `design-feature` then decides how to build it. Use this whenever the user asks to build, create, add, implement or change a feature, endpoint, page, flow, integration, job or behavior, even if they never mention scoping ("let's add X", "build a feature that…", "can you implement…", "I want users to be able to…"). Also use it for "scope this", "drill me", "poke holes in this", "what am I missing". Not for bug fixes (use fix-bug), refactors that keep behavior the same (use refine-code), or one-line tweaks.
+description: Scope a new feature before any code is written. Claude acts as a critical senior engineer and product reviewer. It reads the relevant code and ADRs first, then questions the user in rounds about requirements, edge cases, failure modes and flaws in the idea, each question with a recommended answer. It pushes back on vague answers and agrees with the user on an end state that can be checked by tests, queries or exact UI steps, not by vibes. The result is a spec with Given/When/Then acceptance criteria that the user approves; `design-feature` then decides how to build it. Use this for any request that adds a new capability (a feature, field, setting, export, report, endpoint, page or flow), even when the code looks small, and for other large changes (the large path in AGENTS.md §1: a data model change, several modules, external side effects, concurrency, security, or any decision the request leaves open), even if they never mention scoping ("let's add X", "I want users to be able to…", "customers keep asking for…"). Also use it for "scope this", "drill me", "poke holes in this", "what am I missing". Not for small changes to existing behavior that the request fully specifies (do those directly, test-first), bug fixes (use fix-bug), or refactors that keep behavior the same (use refine-code).
 ---
 
 # Scope feature
@@ -18,7 +18,7 @@ Paths below starting with `~` are in the user's home folder. Expand them to abso
 - **Be critical, specific and constructive.** When something in the idea is flawed, say so plainly, explain the concrete failure ("two recruiters click Approve at once → two invoices"), and propose a fix. Disagree when you have a reason to. Concede when the user gives a better one.
 - **No vibes.** Don't accept "fast", "intuitive", "robust", "seamless", "user-friendly", "handles errors gracefully", "works well" or "scalable" as requirements. Turn each one into something observable: a number, a state, a message, a status code, a row in a table. If the user can't quantify it, propose a number and let them correct it.
 - **Every question carries a recommendation.** Say why it matters (what breaks or stays ambiguous otherwise) and give your recommended answer, worded so the user can accept it with "yes".
-- **Scale to the feature.** A new settings toggle gets one short round. A billing flow or a multi-step async pipeline gets several. If the request is really a bug fix or a trivial tweak, say so in a line and use the right skill instead.
+- **Scale to the feature.** A new settings toggle gets one short round. A billing flow or a multi-step async pipeline gets several. If the request turns out to be a bug fix or a small change (AGENTS.md §1), say so in a line and take that path instead.
 - **Push back on over-scoping too.** Every requirement must serve the goal. Propose cutting what doesn't, including the user's own ideas, and list it under "Out of scope".
 
 ## 0. Learn the project
@@ -84,7 +84,7 @@ Ask for explicit approval of the spec. If the user changes something, update the
 ## 5. Next step
 
 - **Default:** continue with `design-feature` on this spec.
-- **Small change** (one module, no data model change, no new pattern, no new dependency, no concurrency or external side effects): write a five-line design into the spec's Design section yourself (where the change goes, what it reuses, the test that proves each criterion), get it approved with the spec, and go straight to `build-feature`.
+- **Smaller than it looked** (scoping showed one module, no data model change, no new pattern, no new dependency, no concurrency or external side effects): write a five-line design into the spec's Design section yourself (where the change goes, what it reuses, the test that proves each criterion), get it approved with the spec, and go straight to `build-feature`.
 
 ## No profile yet
 

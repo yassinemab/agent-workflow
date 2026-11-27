@@ -9,6 +9,13 @@ Find **why** it's broken, prove it, and fix the cause, not the symptom. A fix wi
 
 Read the project profile first (how profiles work: `~/.claude/project-profiles/README.md`). It has the test commands, the known baseline failures and the rules for reading production data.
 
+## Pick a lane
+
+- **Small lane:** the cause is obvious and local (one function, one file), and the fix doesn't change a design. Do steps 1, 3, 4 and 6 only: a command that goes red on the bug, a regression test that fails first, the smallest fix, then the checks and a short report (cause, test, result). Skip the hypotheses, the wider search and the review.
+- **Full lane:** everything else, or the moment the small lane's assumption breaks (the first fix doesn't hold, the cause is somewhere else, or it touches more than one or two files). Do every step.
+
+Say which lane in one line.
+
 ## 1. Build a feedback loop that goes red
 
 Before forming any theory, get **one command you have already run that fails on this exact bug**. That might be a test, a `curl`, a management-command call or a script against local data. Write down the command and its output.

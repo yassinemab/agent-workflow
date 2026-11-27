@@ -6,7 +6,19 @@ Source of truth: `~/agent-workflow` (a git repo). Edit files there, never throug
 
 ## 1. Workflow
 
-Every change goes through the stage that fits it. Load the skill and follow it; don't improvise the procedure.
+### Pick a path first
+
+Before any work, decide which path the request takes, and say it in one line ("Small change: …"). Size is about open decisions, not lines of code: if you'd have to choose something the user didn't specify, it's large. Decide from the request itself; read code only when the request alone can't tell you. When unsure between two paths, take the larger one. If the work turns out bigger than its path, stop, say so, and switch to the larger path. The user can always choose ("quick fix", "do the full flow").
+
+| Path | When | What to do |
+|---|---|---|
+| **Quick** | A question or explanation, or a trivial edit with an obvious result: copy, a label, a rename, a config value, a typo | Answer, or make the edit. Run the checks if code changed. No skills, no subagents |
+| **Small** | A change to existing behavior that the request fully specifies, in one or two files: no choice left for you to make, and no new data model, dependency, external side effect, concurrency or security impact. A bug with an obvious local cause counts | Bugs: `fix-bug`, small lane. Anything else: state the plan and how you'll check it in two or three lines, write the test first, make the change, run the checks, and check it against §10. No spec, no design, no review subagents |
+| **Large** | Everything else: any new capability for users (a feature, field, setting, export, report or flow), even when the code would be small; a data model change; several modules; external side effects; concurrency; security; an LLM feature; or any decision the request leaves open (a format, validation, rounding, naming users will see) | The full lifecycle below |
+
+### The full lifecycle (large path)
+
+Load the skill for each stage and follow it; don't improvise the procedure.
 
 | Stage | Skill | Done when |
 |---|---|---|
@@ -21,12 +33,12 @@ Every change goes through the stage that fits it. Load the skill and follow it; 
 | Record a decision | `adr` | ADR file written |
 | Learn from the work | `retro` | the user approved or declined each proposal |
 
-- A request to build, add or change behavior starts with `scope-feature`, even if the user doesn't name it. Scale the depth to the change: a label or one-line tweak needs no scoping.
-- A report of wrong behavior is a bug, even when it's phrased as a question: an error message, a wrong number, "what's going on with X", "why does X fail". Load `fix-bug` before investigating.
+- A large request to build, add or change behavior starts with `scope-feature`, even if the user doesn't name it.
+- A report of wrong behavior is a bug, even when it's phrased as a question: an error message, a wrong number, "what's going on with X", "why does X fail". Load `fix-bug` before investigating, and let it pick its lane.
 - A request to review a change goes through `review-change`, so the verdict comes from reviewers who didn't write it. Don't review it yourself instead.
 - When a feature calls an LLM, uses tools or is an agent, `agent-harness` applies on top of the stage skills: its tier choice while scoping, its component checklist in the design, its standards while building, and its audit as an extra reviewer.
 - Subagents run on a cheaper model than the main session: `sonnet` by default, `haiku` for plain searching and reading. The main session keeps the decisions and the final verdict.
-- No implementation code before the user approved the spec (and the design, for anything beyond a small change).
+- On the large path, no implementation code before the user approved the spec and the design.
 - Never commit, push, deploy, open a PR or message anyone unless the user asked for it in this conversation.
 
 ## 2. Design principles

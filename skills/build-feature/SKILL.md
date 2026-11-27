@@ -19,7 +19,7 @@ Copy the slices from the spec into your task list, one item each, plus "review" 
 
 ## 1. For each slice: red, green, refactor
 
-1. **Red.** Write the test for the slice's next acceptance criterion at the agreed seam, named after the behavior (`test_second_approval_does_not_create_a_second_invoice`). Expected values are literals from the spec. Run it and **watch it fail for the right reason**: an assertion about the missing behavior, not an import error, a typo or a broken fixture. A test that passes before the code exists proves nothing; fix the test.
+1. **Red.** Write the test for the slice's next acceptance criterion at the agreed seam, named after the behavior (`test_second_approval_does_not_create_a_second_invoice`). Expected values are literals from the spec. Test through the public entry point a caller would use, with the spec's own examples and every input form it allows (a "number" means a whole number and a decimal). Run it and **watch it fail for the right reason**: an assertion about the missing behavior, not an import error, a typo or a broken fixture. A test that passes before the code exists proves nothing; fix the test.
 2. **Green.** Write the least code that makes it pass, following the design: the components, transaction boundaries, race guards and reuse it names. Type everything (`AGENTS.md` §5). Don't add what no criterion asks for.
 3. **Repeat** red and green for the slice's other criteria, one test at a time. Don't write all the tests first.
 4. **Refactor** while everything is green: remove duplication you introduced, improve names, simplify. Behavior stays the same, and tests stay unchanged.
