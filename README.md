@@ -30,7 +30,7 @@ There are also quality evals that check whether the workflow actually makes the 
 - `skills/`: one skill per step above, plus a few helpers
 - `agents/`: read-only reviewer and verifier agents
 - `hooks/`: block dangerous commands (force push, `git reset --hard`, pushing to `main`), warn when a test gets weaker, and keep a turn from ending until the tests have run
-- `evals/`: checks that requests reach the right skill (19 of 19 pass)
+- `evals/`: routing evals (do requests reach the right skill?) and quality evals (is the work better with the workflow?)
 
 ## Install
 
