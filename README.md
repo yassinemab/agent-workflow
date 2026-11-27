@@ -1,6 +1,6 @@
 ## What
 
-A toolset to make agents work more consistently across the entire development lifecycle. I created it because I realized my agents were delivering inconsistent quality across my repos (and even within a repo it fluctuated). It's built on the "leave the code better than you found it" principle. Agents ask questions and define acceptance criteria before building, get an independent review and prove it works before ending the turn. It also contains a self-improvement loop, so a spotted mistake becomes a new rule and a new eval case.
+Tools to make agents work more consistently across the entire development lifecycle. Built it because I realized my agents were delivering inconsistent quality across different repos (and even within a repo it fluctuated). It's built on the "leave the code better than you found it" principle. Agents ask questions and define acceptance criteria before building, get an independent review and prove it works before ending the turn. It also contains a self-improvement loop, so a spotted mistake becomes a new rule and a new eval case.
 
 ## How a feature gets built
 
@@ -18,7 +18,9 @@ Bugs go through `fix-bug`: reproduce it first, then fix it. You don't have to na
 
 Most of this repo is markdown, so why add evals? Because a skill only helps if the agent actually picks it. The agent decides that by reading the skill descriptions, and a small change in wording can make it skip a step. I wanted to know for sure whether a request reaches the right skill.
 
-There are 19 cases. All of them run a real Claude Code session in a throwaway repo and check which skill is loaded first. For example, "the invoice total comes out as 15 instead of 1.50, can you look into it?" has to go to fix-bug, even though it never says "bug".
+There are 22 cases. All of them run a Claude Code session in a fake repo and check which skill is loaded first. For example, "the invoice total comes out as 15 instead of 1.50, can you look into it?" has to go to fix-bug, even though it never says "bug". Small tasks, like a rename, must skip the full flow.
+
+There are also quality evals that check whether the workflow actually makes the work better. They run 3 test cases 5 times with and without the workflow, and score every run with a blind judge that picks which run performed better. I built this for consistency, so the spread and the worst run matter more than the average.
 
 ## What's inside
 
@@ -30,7 +32,7 @@ There are 19 cases. All of them run a real Claude Code session in a throwaway re
 
 ## Install
 
-You need Python 3.10+, git and Claude Code. Tested on macOS.
+You need Python 3.10+, git and Claude Code. Tested only on macOS.
 
 ```bash
 git clone https://github.com/yassinemab/agent-workflow ~/agent-workflow
@@ -52,7 +54,3 @@ To let the hooks run a project's tests, give that project a `workflow.json` (see
 ## Credits
 
 Ideas from [mattpocock/skills](https://github.com/mattpocock/skills) and Cursor's [pstack](https://github.com/cursor/plugins/tree/main/pstack). `skills/check-design` paraphrases six public design skills, listed in its checklist. `skills/unslop` is adapted from [blader/humanizer](https://github.com/blader/humanizer) (MIT).
-
-## License
-
-MIT, see `LICENSE`.
